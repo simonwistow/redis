@@ -192,4 +192,18 @@ start_server {tags {"pubsub"}} {
         # clean up clients
         $rd1 close
     }
+    
+    test "PUBLISH to a queue with restricted number of clients" {
+        set rd1 [redis_deferring_client]
+
+        # subscribe to one pattern and one regular channel
+        assert_equal {1} [subscribe $rd1 {foo.bar}]
+        assert_equal {2} [psubscribe $rd1 {foo.*}]
+        assert_equal 2 [r publish foo.bar 2 hello]
+        assert_equal 1 [r publish foo.bar 1 hello]
+        assert_equal 2 [r publish foo.bar 3 hello]
+        
+        # clean up clients
+        $rd1 close
+    }
 }

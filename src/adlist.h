@@ -84,6 +84,7 @@ listNode *listSearchKey(list *list, void *key);
 listNode *listIndex(list *list, int index);
 void listRewind(list *list, listIter *li);
 void listRewindTail(list *list, listIter *li);
+list *listShuffle(list *list);
 
 /* Directions for iterators */
 #define AL_START_HEAD 0

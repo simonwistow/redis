@@ -1,5 +1,11 @@
 #include "redis.h"
 
+typedef struct pubsubQueueCandidate {
+    redisClient *client;
+    robj        *channel;
+    robj        *pattern;
+} pubsubQueueCandidate;
+
 /*-----------------------------------------------------------------------------
  * Pubsub low level API
  *----------------------------------------------------------------------------*/
@@ -219,6 +225,87 @@ int pubsubPublishMessage(robj *channel, robj *message) {
     return receivers;
 }
 
+/* Publish a message to a queue*/
+int pubsubPublishMessageQueue(robj *channel, int max_clients, robj *message) {
+    struct dictEntry *de;
+    list     *candidates;
+    listNode *ln;
+    listIter  li;
+    int       receivers = 0;
+
+    
+    candidates = listCreate();
+    
+    
+    /* Find all 'regular' clients listening to this channel */
+    de = dictFind(server.pubsub_channels,channel);
+    if (de) {
+        list *list = dictGetEntryVal(de);
+        listNode *ln;
+        listIter li;
+
+        listRewind(list,&li);
+        while ((ln = listNext(&li)) != NULL) {
+            pubsubQueueCandidate *candidate;
+
+            candidate = zmalloc(sizeof(*candidate));
+            candidate->client  = ln->value;
+            candidate->channel = channel;
+            candidate->pattern = NULL;
+            listAddNodeTail(candidates, candidate);
+        }
+    }
+    
+    /* Find all clients listening to matching channels */
+    if (listLength(server.pubsub_patterns)) {
+        listRewind(server.pubsub_patterns,&li);
+        channel = getDecodedObject(channel);
+        while ((ln = listNext(&li)) != NULL) {
+            pubsubPattern *pat = ln->value;
+    
+            if (stringmatchlen((char*)pat->pattern->ptr,
+                                sdslen(pat->pattern->ptr),
+                                (char*)channel->ptr,
+                                sdslen(channel->ptr),0)) {
+                pubsubQueueCandidate *candidate;
+                candidate = zmalloc(sizeof(*candidate));                   
+                  
+                candidate->client  = pat->client;
+                candidate->channel = channel;
+                candidate->pattern = pat->pattern;                  
+                listAddNodeTail(candidates, candidate);
+            }
+        }
+        decrRefCount(channel);
+    }
+    
+    
+    listShuffle(candidates);
+    listRewind(candidates,&li);
+    while ((ln = listNext(&li)) != NULL && receivers<max_clients) {
+        pubsubQueueCandidate *candidate = ln->value;
+        redisClient *client             = candidate->client;
+        robj        *c_channel          = candidate->channel;
+        
+        if (candidate->pattern) {
+            addReply(client,shared.mbulk4);
+            addReply(client,shared.pmessagebulk);
+            addReplyBulk(client,candidate->pattern);
+        } else {
+            addReply(client,shared.mbulk3);
+            addReply(client,shared.messagebulk);
+        }
+        addReplyBulk(client,c_channel);
+        addReplyBulk(client,message);
+        
+        receivers++;
+    }
+    
+    listRelease(candidates);
+    return receivers;
+    
+}
+
 /*-----------------------------------------------------------------------------
  * Pubsub commands implementation
  *----------------------------------------------------------------------------*/
@@ -262,6 +349,12 @@ void punsubscribeCommand(redisClient *c) {
 }
 
 void publishCommand(redisClient *c) {
-    int receivers = pubsubPublishMessage(c->argv[1],c->argv[2]);
+    int   receivers;
+    
+    if (c->argc > 3) {
+        receivers = pubsubPublishMessageQueue(c->argv[1],atoi(c->argv[2]->ptr),c->argv[3]);
+    } else {
+        receivers = pubsubPublishMessage(c->argv[1],c->argv[2]);
+    }
     addReplyLongLong(c,receivers);
 }

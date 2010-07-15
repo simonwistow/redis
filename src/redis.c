@@ -176,7 +176,7 @@ struct redisCommand readonlyCommandTable[] = {
     {"unsubscribe",unsubscribeCommand,-1,REDIS_CMD_INLINE,NULL,0,0,0},
     {"psubscribe",psubscribeCommand,-2,REDIS_CMD_INLINE,NULL,0,0,0},
     {"punsubscribe",punsubscribeCommand,-1,REDIS_CMD_INLINE,NULL,0,0,0},
-    {"publish",publishCommand,3,REDIS_CMD_BULK|REDIS_CMD_FORCE_REPLICATION,NULL,0,0,0},
+    {"publish",publishCommand,-3,REDIS_CMD_BULK|REDIS_CMD_FORCE_REPLICATION,NULL,0,0,0},
     {"watch",watchCommand,-2,REDIS_CMD_INLINE,NULL,0,0,0},
     {"unwatch",unwatchCommand,1,REDIS_CMD_INLINE,NULL,0,0,0}
 };

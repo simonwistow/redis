@@ -323,3 +323,38 @@ listNode *listIndex(list *list, int index) {
     }
     return n;
 }
+
+/* Does a Fisher Yates shuffle on a list, specifically the Durstenfeld variant. 
+* Warning:  a FY Shuffle is kind of expensive on a linked list so don't use it on large lists */
+list *listShuffle(list *list) {
+    // 
+    // int k = 0;
+    // int n = list->len;
+    // void * tmp;
+    // 
+    // /* Pregenerate a lookup table. This turns it from O(N log N) to O(N) */
+    // listNode* lookup[list->len];
+    // 
+    // listNode *node;
+    // listIter *iter = listGetIterator(list, AL_START_HEAD);
+    // while((node = listNext(iter)) != NULL) {                                                                                                              
+    //     lookup[k++] = node;                                                                                                                                   
+    // }
+    // listRewind(list,iter);
+    // listReleaseIterator(iter);
+    // 
+    // 
+    // while (n>1) { /* n is the number of items remaining to be shuffled */
+    //     k                = randrange(n--); /* Pick a random element from  0..n-1 to swap with the nth element */;
+    //     tmp              = lookup[n]->value;
+    //     lookup[n]->value = lookup[k]->value;
+    //     lookup[k]->value = tmp;
+    // }
+    // 
+    return list;
+}
+
+
+
+
+
